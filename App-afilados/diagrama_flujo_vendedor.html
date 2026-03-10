@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagrama de Flujo – Panel Vendedor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Outfit:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #080b10;
+    --surface: #0f1319;
+    --card: #151b26;
+    --border: #1f2636;
+    --accent: #6c8fff;
+    --accent2: #4dffa0;
+    --accent3: #ff6b6b;
+    --accent4: #ffd166;
+    --text: #dde3f0;
+    --muted: #5a6480;
+    --line: #1e2638;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    padding: 48px 24px 100px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 20% 20%, rgba(108,143,255,.06) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 30% at 80% 80%, rgba(77,255,160,.05) 0%, transparent 70%),
+      linear-gradient(rgba(108,143,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,143,255,.025) 1px, transparent 1px);
+    background-size: auto, auto, 28px 28px, 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 64px;
+    position: relative;
+    z-index: 1;
+  }
+  header .badge {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(108,143,255,.1);
+    border: 1px solid rgba(108,143,255,.25);
+    border-radius: 999px;
+    padding: 4px 14px;
+    margin-bottom: 16px;
+  }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    background: linear-gradient(135deg, #6c8fff 0%, #4dffa0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+  }
+  header p {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-top: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .06em;
+  }
+
+  /* ── layout ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .connector {
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    flex-shrink: 0;
+  }
+
+  .label {
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 10px;
+    margin: 4px 0;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    white-space: nowrap;
+  }
+
+  /* ── nodes ── */
+  .node {
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: .88rem;
+    font-weight: 500;
+    text-align: center;
+    position: relative;
+    line-height: 1.5;
+    animation: fadeUp .45s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .node.start {
+    background: linear-gradient(135deg, #6c8fff, #3d5eff);
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    border-radius: 999px;
+    padding: 18px 48px;
+    box-shadow: 0 0 48px rgba(108,143,255,.4), 0 2px 16px rgba(0,0,0,.4);
+    letter-spacing: .02em;
+  }
+
+  .node.decision {
+    background: var(--card);
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    min-width: 260px;
+    box-shadow: 0 4px 32px rgba(108,143,255,.1);
+  }
+  .node.decision::before { content: '⬡'; display: block; font-size: 1rem; margin-bottom: 4px; opacity: .5; }
+
+  .node.action {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    min-width: 240px;
+  }
+
+  .node.green {
+    background: linear-gradient(135deg, rgba(77,255,160,.1), rgba(77,255,160,.04));
+    border: 1.5px solid var(--accent2);
+    color: var(--accent2);
+    min-width: 200px;
+  }
+
+  .node.red {
+    background: linear-gradient(135deg, rgba(255,107,107,.1), rgba(255,107,107,.04));
+    border: 1.5px solid var(--accent3);
+    color: var(--accent3);
+    min-width: 200px;
+  }
+
+  .node.yellow {
+    background: linear-gradient(135deg, rgba(255,209,102,.1), rgba(255,209,102,.04));
+    border: 1.5px solid var(--accent4);
+    color: var(--accent4);
+    min-width: 200px;
+  }
+
+  .node.blue {
+    background: linear-gradient(135deg, rgba(108,143,255,.12), rgba(108,143,255,.04));
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    min-width: 200px;
+  }
+
+  .node.end {
+    background: linear-gradient(135deg, #4dffa0, #1ab870);
+    color: #060e10;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 14px 40px;
+    box-shadow: 0 0 36px rgba(77,255,160,.35);
+  }
+
+  /* fields */
+  .fields {
+    text-align: left;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: .77rem;
+    color: var(--muted);
+    line-height: 1.75;
+    list-style: none;
+  }
+  .fields li { padding-left: 14px; position: relative; }
+  .fields li::before { content: '›'; position: absolute; left: 0; color: var(--accent); }
+
+  /* step badge */
+  .step {
+    font-family: 'DM Mono', monospace;
+    font-size: .62rem;
+    color: var(--accent);
+    background: rgba(108,143,255,.12);
+    border: 1px solid rgba(108,143,255,.2);
+    border-radius: 4px;
+    padding: 1px 7px;
+    margin-bottom: 5px;
+    display: inline-block;
+  }
+
+  /* section separator */
+  .divider {
+    width: 100%;
+    max-width: 960px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 44px 0 12px;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  /* ── two main branches ── */
+  .main-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    width: 100%;
+    max-width: 1200px;
+    position: relative;
+    align-items: start;
+  }
+
+  .main-split::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+  }
+
+  .split-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .split-col-title {
+    font-family: 'Syne', sans-serif;
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 6px 20px;
+    border-radius: 999px;
+    margin-bottom: 6px;
+  }
+  .split-col-title.t-blue { color: var(--accent); background: rgba(108,143,255,.1); border: 1px solid rgba(108,143,255,.2); }
+  .split-col-title.t-green { color: var(--accent2); background: rgba(77,255,160,.08); border: 1px solid rgba(77,255,160,.2); }
+
+  /* chat sub-branches */
+  .chat-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .chat-item {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    position: relative;
+    transition: border-color .2s;
+  }
+  .chat-item:hover { border-color: var(--accent); }
+  .chat-item .chat-title {
+    font-family: 'Syne', sans-serif;
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chat-item .chat-title .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+  }
+  .chat-item .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pill {
+    font-size: .72rem;
+    font-family: 'DM Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .pill.p-blue { background: rgba(108,143,255,.12); color: var(--accent); border: 1px solid rgba(108,143,255,.2); }
+  .pill.p-green { background: rgba(77,255,160,.1); color: var(--accent2); border: 1px solid rgba(77,255,160,.2); }
+  .pill.p-yellow { background: rgba(255,209,102,.1); color: var(--accent4); border: 1px solid rgba(255,209,102,.2); }
+  .pill.p-red { background: rgba(255,107,107,.1); color: var(--accent3); border: 1px solid rgba(255,107,107,.2); }
+  .pill.p-gray { background: rgba(90,100,128,.1); color: var(--muted); border: 1px solid rgba(90,100,128,.2); }
+
+  /* nested actions for reparacion */
+  .sub-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .sub-section-label {
+    font-size: .68rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-bottom: 6px;
+  }
+  .tool-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  @media (max-width: 700px) {
+    .main-split { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">PANEL INTERNO</div>
+  <h1>Diagrama de Flujo<br>Vendedor</h1>
+  <p>APP · Gestión de pedidos &amp; comunicación con clientes</p>
+</header>
+
+<div class="flow">
+
+  <!-- START -->
+  <div class="node start">🧑‍💼 Usuario Vendedor entra a la APP</div>
+  <div class="connector" style="height:36px;"></div>
+
+  <!-- MAIN SPLIT -->
+  <div class="main-split">
+
+    <!-- ══ COLUMNA IZQUIERDA: PEDIDOS ══ -->
+    <div class="split-col">
+      <div class="connector" style="height:16px; background: linear-gradient(to bottom, var(--accent), transparent);"></div>
+      <div class="split-col-title t-blue">📦 Pedidos Pendientes</div>
+      <div class="connector" style="height:20px;"></div>
+
+      <div class="node blue" style="min-width:280px; width:100%; max-width:380px;">
+        Cantidad de pedidos por zona
+        <ul class="fields">
+          <li>Vista agrupada por zona geográfica</li>
+          <li>Cantidad de ítems por zona</li>
+        </ul>
+      </div>
+      <div class="connector" style="height:24px;"></div>
+
+      <div class="node action" style="width:100%; max-width:380px;">
+        <div class="step">ACCIÓN</div>
+        ☑️ Confirmar todos los pedidos del día
+      </div>
+      <div class="connector" style="height:24px;"></div>
+
+      <div class="node green" style="width:100%; max-width:380px;">
+        <div class="step">AUTO</div>
+        🗺️ Generación de mapa de entregas
+        <ul class="fields" style="color:rgba(77,255,160,.6);">
+          <li>Ruta optimizada por zona</li>
+          <li>Orden de visitas sugerido</li>
+        </ul>
+      </div>
+      <div class="connector" style="height:24px;"></div>
+
+      <div class="node action" style="width:100%; max-width:380px;">
+        <div class="step">AUTO</div>
+        📲 Envío de aviso a clientes de la zona
+        <ul class="fields">
+          <li>Mensaje automático por zona</li>
+          <li>"El afilador pasará hoy por tu zona"</li>
+        </ul>
+      </div>
+      <div class="connector" style="height:24px;"></div>
+
+      <div class="node end" style="font-size:.85rem; padding:12px 30px;">✅ Día de reparto organizado</div>
+    </div>
+
+    <!-- ══ COLUMNA DERECHA: CHATS ══ -->
+    <div class="split-col">
+      <div class="connector" style="height:16px; background: linear-gradient(to bottom, var(--accent2), transparent);"></div>
+      <div class="split-col-title t-green">💬 Chats Entrantes</div>
+      <div class="connector" style="height:20px;"></div>
+
+      <div class="chat-grid" style="width:100%; max-width:480px;">
+
+        <!-- Chat 1: Cotización Afilado -->
+        <div class="chat-item">
+          <div class="chat-title">
+            <span class="dot" style="background:var(--accent);"></span>
+            Cotización de Afilado
+          </div>
+          <div class="actions">
+            <span class="pill p-blue">💰 Dar precio</span>
+            <span class="pill p-blue">ℹ️ Brindar información</span>
+          </div>
+        </div>
+
+        <!-- Chat 2: Tiempos de tardanza -->
+        <div class="chat-item">
+          <div class="chat-title">
+            <span class="dot" style="background:var(--accent4);"></span>
+            Tiempos de Tardanza
+          </div>
+          <div class="actions">
+            <span class="pill p-yellow">🗺️ Informar por zona en el mapeo</span>
+          </div>
+        </div>
+
+        <!-- Chat 3: Aviso de entrega -->
+        <div class="chat-item">
+          <div class="chat-title">
+            <span class="dot" style="background:var(--accent2);"></span>
+            Aviso de Entrega
+          </div>
+
+          <div class="sub-section">
+            <div class="sub-section-label">📍 Dirección alternativa</div>
+            <div class="actions">
+              <span class="pill p-green">✔ Confirmar registro correcto</span>
+            </div>
+          </div>
+
+          <div class="sub-section">
+            <div class="sub-section-label">🕐 Horarios específicos</div>
+            <div class="actions">
+              <span class="pill p-yellow">📅 Arreglar otro día de entrega</span>
+              <span class="pill p-yellow">📍 Arreglar dirección secundaria</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat 4: Cotización Reparación -->
+        <div class="chat-item" style="border-color: rgba(255,107,107,.3);">
+          <div class="chat-title">
+            <span class="dot" style="background:var(--accent3);"></span>
+            Cotización de Reparación
+          </div>
+          <div class="actions">
+            <span class="pill p-red">💰 Dar precios de reparación</span>
+            <span class="pill p-red">ℹ️ Brindar información</span>
+          </div>
+
+          <div class="sub-section">
+            <div class="sub-section-label">🆕 Ofrecer herramienta nueva</div>
+            <div class="tool-chips">
+              <span class="pill p-blue">🔵 Sierras</span>
+              <span class="pill p-green">🔧 Fresas</span>
+              <span class="pill p-yellow">🔩 Mechas</span>
+              <span class="pill p-red">🗡 Cuchillas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat 5: Otros -->
+        <div class="chat-item" style="border-style: dashed;">
+          <div class="chat-title">
+            <span class="dot" style="background:var(--muted);"></span>
+            Otros
+          </div>
+          <div class="actions">
+            <span class="pill p-gray">❓ Gestión libre con el cliente</span>
+          </div>
+        </div>
+
+      </div><!-- /chat-grid -->
+    </div>
+
+  </div><!-- /main-split -->
+
+</div><!-- /flow -->
+
+</body>
+</html>

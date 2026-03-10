@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagrama de Flujo – Afilado & Reparación</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Outfit:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --card: #1a1e2a;
+    --border: #252a38;
+    --accent: #f0a500;
+    --accent2: #3ecfcf;
+    --accent3: #e05a7a;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --line: #2d3347;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+    overflow-x: hidden;
+  }
+
+  /* background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(240,165,0,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,165,0,.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 60px;
+    position: relative;
+    z-index: 1;
+  }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p {
+    color: var(--muted);
+    font-size: .9rem;
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .05em;
+  }
+
+  /* ── flow canvas ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* connector line */
+  .connector {
+    width: 2px;
+    height: 36px;
+    background: linear-gradient(to bottom, var(--accent), var(--border));
+    flex-shrink: 0;
+  }
+  .connector.split {
+    display: none; /* handled by branch layout */
+  }
+
+  /* ── nodes ── */
+  .node {
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: .88rem;
+    font-weight: 500;
+    text-align: center;
+    position: relative;
+    animation: fadeUp .5s ease both;
+    line-height: 1.4;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .node.start {
+    background: linear-gradient(135deg, #f0a500, #f07a00);
+    color: #0d0f14;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: .03em;
+    box-shadow: 0 0 32px rgba(240,165,0,.35);
+    padding: 16px 36px;
+    border-radius: 999px;
+  }
+
+  .node.decision {
+    background: var(--card);
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    transform: rotate(-1deg);
+    min-width: 240px;
+    box-shadow: 0 4px 24px rgba(240,165,0,.12);
+  }
+  .node.decision::before {
+    content: '◆';
+    display: block;
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+    opacity: .7;
+  }
+
+  .node.action {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    min-width: 220px;
+  }
+
+  .node.sub {
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    color: var(--muted);
+    font-size: .8rem;
+    min-width: 180px;
+  }
+
+  .node.info {
+    background: linear-gradient(135deg, rgba(62,207,207,.12), rgba(62,207,207,.04));
+    border: 1.5px solid var(--accent2);
+    color: var(--accent2);
+    min-width: 200px;
+  }
+
+  .node.warn {
+    background: linear-gradient(135deg, rgba(224,90,122,.12), rgba(224,90,122,.04));
+    border: 1.5px solid var(--accent3);
+    color: var(--accent3);
+    min-width: 200px;
+  }
+
+  .node.end {
+    background: linear-gradient(135deg, #3ecfcf, #1a9a9a);
+    color: #0d0f14;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 14px 36px;
+    box-shadow: 0 0 32px rgba(62,207,207,.3);
+  }
+
+  /* label on connector */
+  .label {
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin: 4px 0;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+  }
+
+  /* ── branch layout ── */
+  .branch-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    position: relative;
+  }
+
+  .branch-row::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+  }
+
+  .branch-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+  }
+
+  .branch-col .branch-header {
+    font-family: 'Syne', sans-serif;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  /* fields list inside node */
+  .fields {
+    text-align: left;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: .78rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .fields li { list-style: none; padding-left: 12px; position: relative; }
+  .fields li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-size: .7rem; top: 2px; }
+
+  /* wide branches for the service type selectors */
+  .service-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .service-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: .8rem;
+    color: var(--text);
+    transition: border-color .2s;
+  }
+  .service-card:hover { border-color: var(--accent); }
+  .service-card strong {
+    display: block;
+    font-family: 'Syne', sans-serif;
+    font-size: .85rem;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .service-card ul { list-style: none; }
+  .service-card ul li { font-size: .75rem; color: var(--muted); line-height: 1.7; }
+  .service-card ul li::before { content: '· '; color: var(--accent2); }
+
+  /* section title */
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 0 16px;
+    position: relative;
+    z-index: 1;
+    margin: 8px 0;
+  }
+
+  /* divider */
+  .divider {
+    width: 100%;
+    max-width: 900px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 32px 0 8px;
+  }
+
+  /* step number badge */
+  .step {
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    color: var(--accent);
+    background: rgba(240,165,0,.1);
+    border: 1px solid rgba(240,165,0,.25);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-bottom: 4px;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Diagrama de Flujo</h1>
+  <p>APP · Servicio de Afilado &amp; Reparación</p>
+</header>
+
+<div class="flow">
+
+  <!-- START -->
+  <div class="node start">👤 Usuario entra a la APP</div>
+  <div class="connector"></div>
+
+  <!-- ¿ES CLIENTE? -->
+  <div class="node decision">¿Es cliente?</div>
+
+  <div class="connector"></div>
+
+  <!-- BRANCH CLIENTE / NO CLIENTE -->
+  <div class="branch-row" style="align-items:flex-start; gap:40px; max-width:860px; width:100%;">
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent2)">✔ SÍ – Cliente</div>
+      <div class="connector"></div>
+      <div class="node info">Identificación de cliente
+        <ul class="fields">
+          <li>Nro. de cliente</li>
+          <li>DNI o CUIT</li>
+          <li>Nombre / Razón social</li>
+          <li>Nro. de teléfono</li>
+        </ul>
+        <small style="font-size:.7rem;color:var(--muted);display:block;margin-top:6px;">(cualquiera de estas opciones)</small>
+      </div>
+    </div>
+
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent3)">✖ NO – Nuevo cliente</div>
+      <div class="connector"></div>
+      <div class="node warn">Alta de nuevo cliente
+        <ul class="fields">
+          <li>Razón social / Nombre</li>
+          <li>CUIT o CUIL</li>
+          <li>Dirección</li>
+          <li>Código postal</li>
+          <li>Localidad</li>
+          <li>Provincia</li>
+          <li>Email</li>
+          <li>Teléfono</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector" style="height:48px;"></div>
+
+  <!-- SERVICIO -->
+  <div class="node decision" style="min-width:320px;">¿Qué servicio necesita?</div>
+  <div class="connector"></div>
+
+  <div class="branch-row" style="max-width:700px; width:100%;">
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent)">AFILAR</div>
+    </div>
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent2)">REPARAR</div>
+    </div>
+    <div class="branch-col">
+      <div class="label" style="color:var(--muted)">CHAT CON VENDEDOR</div>
+    </div>
+  </div>
+
+  <div class="connector" style="height:24px;"></div>
+
+  <!-- ─── AFILAR section ─── -->
+  <div class="section-title">── AFILAR ──</div>
+  <div class="connector"></div>
+  <div class="node action" style="min-width:320px;">Selecciona tipo de herramienta a afilar</div>
+  <div class="connector"></div>
+
+  <div class="service-grid">
+    <div class="service-card">
+      <strong>🔵 SC Franzoi</strong>
+      <ul>
+        <li>Cant. sierras</li>
+        <li>Diámetro exterior</li>
+        <li>Cant. dientes</li>
+        <li>Cant. rascadores</li>
+        <li>Ancho de corte</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🟡 SC Melamina / Madera</strong>
+      <ul>
+        <li>Cant. sierras</li>
+        <li>Diámetro exterior</li>
+        <li>Cant. dientes</li>
+        <li>Cant. rascadores</li>
+        <li>Ancho de corte</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🟣 SC + Incisor</strong>
+      <ul>
+        <li>Cant. sierras</li>
+        <li>Diámetro exterior (sierra)</li>
+        <li>Cant. dientes (sierra)</li>
+        <li>Cant. rascadores</li>
+        <li>Ancho de corte</li>
+        <li>Diámetro exterior (incisor)</li>
+        <li>Cant. dientes (incisor)</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🔧 Fresas</strong>
+      <ul>
+        <li>Modelo de fresa</li>
+        <li>Cant. fresas</li>
+        <li>Cant. dientes</li>
+        <li>Ancho de corte</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🗡 Cuchillas</strong>
+      <ul>
+        <li>Plana / Dorso ranurado</li>
+        <li>Cant. cuchillas</li>
+        <li>Material: Widia / HSS</li>
+        <li>Largo · Ancho · Espesor</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🔩 Mechas</strong>
+      <ul>
+        <li>Bisagra / Integral Widia</li>
+        <li>Ciegas / Pasantes / Compresión</li>
+        <li>Cant. mechas</li>
+        <li>Largo útil (opcional)</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>〰 Sierra sin fin</strong>
+      <ul>
+        <li>Cant. sierras sin fin</li>
+        <li>Altura (opcional)</li>
+        <li>Desarrollo (opcional)</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>⚙ Cabezales</strong>
+      <ul>
+        <li>Cant. cabezales</li>
+        <li>Cant. dientes</li>
+        <li>Cant. incisores (si tiene)</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>💎 Diamante</strong>
+      <ul>
+        <li>Sierra circular</li>
+        <li>Mechas</li>
+        <li>Cabezales</li>
+        <li>(datos según subtipo)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ─── REPARAR section ─── -->
+  <div class="section-title">── REPARAR ──</div>
+  <div class="connector"></div>
+  <div class="node action" style="min-width:320px;">Selecciona tipo de herramienta a reparar</div>
+  <div class="connector"></div>
+
+  <div class="service-grid">
+    <div class="service-card">
+      <strong>🔵 SC Franzoi</strong>
+      <ul>
+        <li>Cant. sierras</li>
+        <li>Diámetro exterior</li>
+        <li>Cant. dientes a reparar</li>
+        <li>Cant. rascadores a reparar</li>
+        <li>Ancho de corte</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🟡 SC Melamina / Madera</strong>
+      <ul>
+        <li>Cant. sierras</li>
+        <li>Diámetro exterior</li>
+        <li>Cant. dientes a reparar</li>
+        <li>Cant. rascadores a reparar</li>
+        <li>Ancho de corte</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🟣 SC + Incisor</strong>
+      <ul>
+        <li>Cant. sierras</li>
+        <li>Diámetro exterior (sierra)</li>
+        <li>Cant. dientes a reparar (sierra)</li>
+        <li>Cant. rascadores a reparar</li>
+        <li>Ancho de corte</li>
+        <li>Diámetro exterior (incisor)</li>
+        <li>Cant. dientes a reparar (incisor)</li>
+        <li>¿Requiere hermanado?</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🔧 Fresas</strong>
+      <ul>
+        <li>Modelo de fresa</li>
+        <li>Cant. fresas</li>
+        <li>Cant. dientes a reparar</li>
+        <li>Ancho de corte</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🔩 Mechas</strong>
+      <ul>
+        <li>Bisagra / Integral / Ciegas</li>
+        <li>Pasantes / Compresión</li>
+        <li>Cant. mechas</li>
+        <li>Cant. dientes a reparar</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>🗡 Cuchillas</strong>
+      <ul>
+        <li>Plana / Dorso ranurado</li>
+        <li>Cant. cuchillas</li>
+        <li>Material: Widia / HSS</li>
+        <li>Largo · Ancho · Espesor</li>
+      </ul>
+    </div>
+    <div class="service-card">
+      <strong>⚙ Cabezales</strong>
+      <ul>
+        <li>Cant. cabezales</li>
+        <li>Cant. dientes a reparar</li>
+        <li>Cant. incisores a reparar (si tiene)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ─── POST SELECCIÓN ─── -->
+  <div class="section-title">── LOGÍSTICA & CIERRE ──</div>
+  <div class="connector" style="height:24px;"></div>
+
+  <div class="node action" style="min-width:340px; font-size:.92rem;">
+    <div class="step">PASO 1</div>
+    📍 Ingresar dirección de retiro<br>
+    <small style="color:var(--muted);font-size:.78rem;">(dirección manual o ubicación actual)</small>
+  </div>
+  <div class="connector"></div>
+
+  <div class="node decision">¿El afilador pasa por la zona?</div>
+
+  <div class="branch-row" style="max-width:780px; width:100%; margin-top:8px;">
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent2)">✔ SÍ – pasa por la zona</div>
+      <div class="connector"></div>
+      <div class="node info">Aviso de día de visita del afilador</div>
+    </div>
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent3)">✖ NO – fuera de zona</div>
+      <div class="connector"></div>
+      <div class="node warn">Opciones de envío
+        <ul class="fields">
+          <li>Via Cargo / Credifin</li>
+          <li>Sucursal más cercana (más económico)</li>
+          <li>Envío a domicilio (más costoso)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector" style="height:40px;"></div>
+
+  <div class="node action" style="min-width:340px;">
+    <div class="step">PASO 2</div>
+    🧾 ¿Requiere factura?
+  </div>
+  <div class="connector"></div>
+
+  <div class="branch-row" style="max-width:700px; width:100%;">
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent2)">CON FACTURA</div>
+      <div class="connector"></div>
+      <div class="node info">Generar NP en facturación<br><small style="font-size:.75rem;">(info para el vendedor)</small></div>
+    </div>
+    <div class="branch-col">
+      <div class="label" style="color:var(--muted)">SIN FACTURA</div>
+      <div class="connector"></div>
+      <div class="node sub">Generar NP de presupuesto<br><small style="font-size:.75rem;">(info para el vendedor)</small></div>
+    </div>
+  </div>
+
+  <div class="connector" style="height:40px;"></div>
+
+  <div class="node action" style="min-width:340px;">
+    <div class="step">PASO 3</div>
+    💳 Método de pago
+  </div>
+  <div class="connector"></div>
+
+  <div class="branch-row" style="max-width:780px; width:100%;">
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent)">EFECTIVO</div>
+      <div class="connector"></div>
+      <div class="node action" style="font-size:.8rem;">En oficina o al vendedor<br>
+        <ul class="fields">
+          <li>Con factura (10% descuento)</li>
+          <li>Sin factura</li>
+        </ul>
+      </div>
+    </div>
+    <div class="branch-col">
+      <div class="label" style="color:var(--accent2)">TRANSFERENCIA</div>
+      <div class="connector"></div>
+      <div class="node info" style="font-size:.8rem;">Con factura → CBU Woodtools<br>Sin factura → Chat con vendedor<br><small style="color:var(--muted);font-size:.72rem;">(para recibir cuenta)</small></div>
+    </div>
+  </div>
+
+  <div class="connector" style="height:40px;"></div>
+
+  <div class="node action" style="min-width:340px;">
+    <div class="step">PASO 4</div>
+    ✅ Comprobante de reserva emitido<br>
+    <small style="color:var(--muted);font-size:.78rem;">Se avisa al cliente cuándo pasa el afilador</small>
+  </div>
+
+  <div class="connector" style="height:24px;"></div>
+  <div class="node end">🎉 Proceso completado</div>
+
+  <div class="divider"></div>
+
+  <!-- CHAT CON VENDEDOR -->
+  <div class="section-title">── CHAT CON VENDEDOR ──</div>
+  <div class="connector" style="height:20px;"></div>
+  <div class="node action" style="min-width:340px;">Seleccionar motivo de contacto</div>
+  <div class="connector"></div>
+
+  <div class="service-grid" style="max-width:860px;">
+    <div class="service-card"><strong>💬 Cotización afilado</strong></div>
+    <div class="service-card"><strong>⏱ Tiempos de tardanza</strong></div>
+    <div class="service-card"><strong>📦 Aviso de entrega</strong></div>
+    <div class="service-card"><strong>📍 Dirección alternativa</strong></div>
+    <div class="service-card"><strong>🕐 Horarios específicos</strong></div>
+    <div class="service-card"><strong>🔧 Cotización reparación</strong></div>
+    <div class="service-card"><strong>❓ Otros</strong></div>
+  </div>
+
+  <div class="connector" style="height:24px;"></div>
+  <div class="node end">💬 Conectado con el vendedor</div>
+
+</div>
+
+</body>
+</html>
